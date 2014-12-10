@@ -8,8 +8,10 @@ import (
 	"os"
 )
 
-const DEFAULT_MEMORY_SIZE int64 = 1 << 18
-const FILE_NAME_PREFIX = "mem-buf-"
+const (
+	DefaultMemorySize int64 = 1 << 18
+	FilenamePrefix          = "mem-buf-"
+)
 
 type MemoryConstrainedBuffer struct {
 	b             *bytes.Buffer
@@ -28,7 +30,7 @@ func NewMemoryConstrainedBuffer(maxMemory int64, removeOnClose bool) *MemoryCons
 }
 
 func NewDefaultMemoryConstrainedBuffer() *MemoryConstrainedBuffer {
-	return NewMemoryConstrainedBuffer(DEFAULT_MEMORY_SIZE, true)
+	return NewMemoryConstrainedBuffer(DefaultMemorySize, true)
 }
 
 func (m *MemoryConstrainedBuffer) Write(p []byte) (int, error) {
@@ -58,7 +60,7 @@ func (m *MemoryConstrainedBuffer) ReadFrom(r io.Reader) (int64, error) {
 
 		if n > m.max {
 			// too big, write to disk and flush buffer
-			file, err := ioutil.TempFile("", FILE_NAME_PREFIX)
+			file, err := ioutil.TempFile("", FilenamePrefix)
 			if err != nil {
 				return 0, err
 			}
