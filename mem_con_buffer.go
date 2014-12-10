@@ -116,7 +116,7 @@ func (m *MemoryConstrainedBuffer) open() error {
 	return err
 }
 
-func (m *MemoryConstrainedBuffer) Read(p []byte) (n int, err error) {
+func (m *MemoryConstrainedBuffer) Read(p []byte) (int, error) {
 	if m.file == nil {
 		if err := m.open(); err != nil {
 			return 0, err
@@ -125,7 +125,7 @@ func (m *MemoryConstrainedBuffer) Read(p []byte) (n int, err error) {
 	return m.file.Read(p)
 }
 
-func (m *MemoryConstrainedBuffer) ReadAt(p []byte, off int64) (n int, err error) {
+func (m *MemoryConstrainedBuffer) ReadAt(p []byte, off int64) (int, error) {
 	if m.file == nil {
 		if err := m.open(); err != nil {
 			return 0, err
