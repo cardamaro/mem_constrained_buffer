@@ -26,6 +26,7 @@ func NewMemoryConstrainedBuffer(maxMemory int64, removeOnClose bool) *MemoryCons
 	return &MemoryConstrainedBuffer{
 		max:           maxMemory,
 		removeOnClose: removeOnClose,
+		b:             new(bytes.Buffer),
 	}
 }
 
@@ -38,15 +39,44 @@ func (m *MemoryConstrainedBuffer) Write(p []byte) (int, error) {
 	return int(n), err
 }
 
+func (m *MemoryConstrainedBuffer) open() error {
+	if m.file != nil {
+		return nil
+	}
+	if b := m.b; b != nil {
+		m.file = &sectionReadCloser{io.NewSectionReader(bytes.NewReader(m.b.Bytes()), 0, int64(b.Len()))}
+		return nil
+	}
+	f, err := os.Open(m.tmpfile)
+	m.file = f
+	return err
+}
+
+func (m *MemoryConstrainedBuffer) Read(p []byte) (int, error) {
+	if err := m.open(); err != nil {
+		return 0, err
+	}
+	n, err := m.file.Read(p)
+	return n, err
+}
+
+func (m *MemoryConstrainedBuffer) ReadAt(p []byte, off int64) (int, error) {
+	if m.file == nil {
+		if err := m.open(); err != nil {
+			return 0, err
+		}
+	}
+	return m.file.ReadAt(p, off)
+}
+
 func (m *MemoryConstrainedBuffer) ReadFrom(r io.Reader) (int64, error) {
 	var (
 		n   int64
 		err error
-		buf bytes.Buffer
 	)
 
 	for {
-		n, err = io.CopyN(&buf, r, m.max+1)
+		n, err = io.CopyN(m.b, r, m.max+1)
 		if err != nil && err != io.EOF {
 			return 0, err
 		}
@@ -64,13 +94,15 @@ func (m *MemoryConstrainedBuffer) ReadFrom(r io.Reader) (int64, error) {
 			if err != nil {
 				return 0, err
 			}
-			defer file.Close()
-			n, err = io.Copy(file, io.MultiReader(&buf, r))
+			n, err = io.Copy(file, io.MultiReader(m.b, r))
 			if err != nil {
 				os.Remove(file.Name())
 				return 0, err
 			}
+			m.b.Reset()
 			m.tmpfile = file.Name()
+			m.file = file
+			m.file.Seek(0, 0)
 			m.size = n
 			break
 
@@ -79,15 +111,18 @@ func (m *MemoryConstrainedBuffer) ReadFrom(r io.Reader) (int64, error) {
 		}
 	}
 
-	if m.tmpfile == "" {
-		m.b = &buf
-	}
-
 	return n, err
 }
 
 func (m *MemoryConstrainedBuffer) Len() int64 {
 	return m.size
+}
+
+func (m *MemoryConstrainedBuffer) Seek(offset int64, whence int) (int64, error) {
+	if err := m.open(); err != nil {
+		return 0, err
+	}
+	return m.file.Seek(offset, whence)
 }
 
 func (m *MemoryConstrainedBuffer) Remove() (err error) {
@@ -103,54 +138,16 @@ func (m *MemoryConstrainedBuffer) Remove() (err error) {
 	return err
 }
 
-func (m *MemoryConstrainedBuffer) open() error {
-	if m.file != nil {
-		return nil
-	}
-	if b := m.b; b != nil {
-		m.file = &sectionReadCloser{io.NewSectionReader(bytes.NewReader(m.b.Bytes()), 0, int64(b.Len()))}
-		return nil
-	}
-	f, err := os.Open(m.tmpfile)
-	m.file = f
-	return err
-}
-
-func (m *MemoryConstrainedBuffer) Read(p []byte) (int, error) {
-	if m.file == nil {
-		if err := m.open(); err != nil {
-			return 0, err
-		}
-	}
-	return m.file.Read(p)
-}
-
-func (m *MemoryConstrainedBuffer) ReadAt(p []byte, off int64) (int, error) {
-	if m.file == nil {
-		if err := m.open(); err != nil {
-			return 0, err
-		}
-	}
-	return m.file.ReadAt(p, off)
-}
-
-func (m *MemoryConstrainedBuffer) Seek(offset int64, whence int) (int64, error) {
-	if m.file == nil {
-		if err := m.open(); err != nil {
-			return 0, err
-		}
-	}
-	return m.file.Seek(offset, whence)
-}
-
 func (m *MemoryConstrainedBuffer) Close() error {
-	if m.removeOnClose {
-		defer m.Remove()
-	}
+	m.b.Reset()
 	if m.file == nil {
 		return nil
 	}
-	return m.file.Close()
+	err := m.file.Close()
+	if m.removeOnClose {
+		err = m.Remove()
+	}
+	return err
 }
 
 type sectionReadCloser struct {
