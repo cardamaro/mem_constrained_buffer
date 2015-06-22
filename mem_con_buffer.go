@@ -14,7 +14,7 @@ const (
 )
 
 type MemoryConstrainedBuffer struct {
-	b             *bytes.Buffer
+	b             bytes.Buffer
 	tmpfile       string
 	max           int64
 	size          int64
@@ -26,7 +26,6 @@ func NewMemoryConstrainedBuffer(maxMemory int64, removeOnClose bool) *MemoryCons
 	return &MemoryConstrainedBuffer{
 		max:           maxMemory,
 		removeOnClose: removeOnClose,
-		b:             new(bytes.Buffer),
 	}
 }
 
@@ -43,8 +42,9 @@ func (m *MemoryConstrainedBuffer) open() error {
 	if m.file != nil {
 		return nil
 	}
-	if b := m.b; b != nil {
-		m.file = &sectionReadCloser{io.NewSectionReader(bytes.NewReader(m.b.Bytes()), 0, int64(b.Len()))}
+	if m.tmpfile == "" {
+		m.file = &sectionReadCloser{
+			io.NewSectionReader(bytes.NewReader(m.b.Bytes()), 0, int64(m.b.Len()))}
 		return nil
 	}
 	f, err := os.Open(m.tmpfile)
@@ -76,7 +76,7 @@ func (m *MemoryConstrainedBuffer) ReadFrom(r io.Reader) (int64, error) {
 	)
 
 	for {
-		n, err = io.CopyN(m.b, r, m.max+1)
+		n, err = io.CopyN(&m.b, r, m.max+1)
 		if err != nil && err != io.EOF {
 			return 0, err
 		}
@@ -94,7 +94,7 @@ func (m *MemoryConstrainedBuffer) ReadFrom(r io.Reader) (int64, error) {
 			if err != nil {
 				return 0, err
 			}
-			n, err = io.Copy(file, io.MultiReader(m.b, r))
+			n, err = io.Copy(file, io.MultiReader(&m.b, r))
 			if err != nil {
 				os.Remove(file.Name())
 				return 0, err
@@ -111,7 +111,7 @@ func (m *MemoryConstrainedBuffer) ReadFrom(r io.Reader) (int64, error) {
 		}
 	}
 
-	return n, err
+	return m.size, err
 }
 
 func (m *MemoryConstrainedBuffer) Len() int64 {
