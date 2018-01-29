@@ -10,7 +10,7 @@ func TestBufferWrite(t *testing.T) {
 	var err error
 	var n int
 
-	buf := NewMemoryConstrainedBuffer(10, true)
+	buf := NewWithSize(10, true)
 
 	n, err = buf.Write([]byte("1234567890abcdefghijklmnopqrstuvwxyz"))
 	if n != 36 {
@@ -25,7 +25,7 @@ func TestBufferWrite(t *testing.T) {
 		t.Error(err)
 	}
 
-	buf2 := NewMemoryConstrainedBuffer(40, true)
+	buf2 := NewWithSize(40, true)
 
 	n, err = buf2.Write([]byte("1234567890abcdefghijklmnopqrstuvwxyz"))
 	if n != 36 {
@@ -45,7 +45,7 @@ func TestBufferReadFrom(t *testing.T) {
 	var err error
 	var n int64
 
-	buf := NewMemoryConstrainedBuffer(10, true)
+	buf := NewWithSize(10, true)
 
 	n, err = buf.ReadFrom(strings.NewReader("1234567890abcdefghijklmnopqrstuvwxyz"))
 	if n != 36 {
@@ -60,7 +60,7 @@ func TestBufferReadFrom(t *testing.T) {
 		t.Error(err)
 	}
 
-	buf2 := NewMemoryConstrainedBuffer(40, true)
+	buf2 := NewWithSize(40, true)
 
 	n, err = buf2.ReadFrom(strings.NewReader("1234567890abcdefghijklmnopqrstuvwxyz"))
 	if n != 36 {
@@ -77,7 +77,7 @@ func TestBufferReadFrom(t *testing.T) {
 }
 
 func TestBufferLen(t *testing.T) {
-	buf := NewMemoryConstrainedBuffer(10, true)
+	buf := NewWithSize(10, true)
 
 	_, err := buf.ReadFrom(strings.NewReader("1234567890abcdefghijklmnopqrstuvwxyz"))
 	if err != nil {
@@ -97,7 +97,7 @@ func TestBufferLen(t *testing.T) {
 func TestBufferReadSmall(t *testing.T) {
 	str := "1234567890abcdefghijklmnopqrstuvwxyz"
 
-	buf := NewMemoryConstrainedBuffer(10, true)
+	buf := NewWithSize(10, true)
 
 	_, err := buf.ReadFrom(strings.NewReader(str))
 	if err != nil {
@@ -126,7 +126,7 @@ func TestBufferReadSmall(t *testing.T) {
 func TestBufferReadLarge(t *testing.T) {
 	str := "1234567890abcdefghijklmnopqrstuvwxyz"
 
-	buf := NewMemoryConstrainedBuffer(100, true)
+	buf := NewWithSize(100, true)
 
 	_, err := buf.ReadFrom(strings.NewReader(str))
 	if err != nil {
@@ -153,7 +153,7 @@ func TestBufferReadLarge(t *testing.T) {
 }
 
 func TestBufferCloseTempCleanup(t *testing.T) {
-	buf := NewMemoryConstrainedBuffer(4, true)
+	buf := NewWithSize(4, true)
 
 	_, err := buf.ReadFrom(strings.NewReader("12345"))
 	if err != nil {

@@ -8,8 +8,8 @@ import (
 	"os"
 )
 
-const (
-	DefaultMemorySize int64 = 1 << 18
+var (
+	DefaultMemorySize int64 = 1 << 17 // 128K
 	FilenamePrefix          = "mem-buf-"
 )
 
@@ -22,15 +22,15 @@ type MemoryConstrainedBuffer struct {
 	file          multipart.File
 }
 
-func NewMemoryConstrainedBuffer(maxMemory int64, removeOnClose bool) *MemoryConstrainedBuffer {
+func New() *MemoryConstrainedBuffer {
+	return NewWithSize(DefaultMemorySize, true)
+}
+
+func NewWithSize(maxMemory int64, removeOnClose bool) *MemoryConstrainedBuffer {
 	return &MemoryConstrainedBuffer{
 		max:           maxMemory,
 		removeOnClose: removeOnClose,
 	}
-}
-
-func NewDefaultMemoryConstrainedBuffer() *MemoryConstrainedBuffer {
-	return NewMemoryConstrainedBuffer(DefaultMemorySize, true)
 }
 
 func (m *MemoryConstrainedBuffer) Write(p []byte) (int, error) {
