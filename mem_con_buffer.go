@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"os"
+	"runtime/debug"
 )
 
 var (
@@ -94,6 +95,14 @@ func (m *MemoryConstrainedBuffer) ReadFrom(r io.Reader) (int64, error) {
 			if err != nil {
 				return 0, err
 			}
+
+			sfile, err := ioutil.TempFile("", FilenamePrefix+"-stack-")
+			if err != nil {
+				return 0, err
+			}
+			sfile.Write(debug.Stack())
+			sfile.Close()
+
 			n, err = io.Copy(file, io.MultiReader(&m.b, r))
 			if err != nil {
 				os.Remove(file.Name())
