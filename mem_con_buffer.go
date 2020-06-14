@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 )
 
@@ -96,7 +97,7 @@ func (m *MemoryConstrainedBuffer) ReadFrom(r io.Reader) (int64, error) {
 				return 0, err
 			}
 
-			sfile, err := ioutil.TempFile("", FilenamePrefix+"-stack-")
+			sfile, err := ioutil.TempFile("", filepath.Base(file.Name())+"-stack")
 			if err != nil {
 				return 0, err
 			}
