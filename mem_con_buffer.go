@@ -6,8 +6,6 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"os"
-	"path/filepath"
-	"runtime/debug"
 )
 
 var (
@@ -107,17 +105,10 @@ func (m *MemoryConstrainedBuffer) ReadFrom(r io.Reader) (int64, error) {
 			if err != nil {
 				return 0, err
 			}
-			defer m.close()
-
-			sfile, err := ioutil.TempFile("", filepath.Base(file.Name())+"-stack")
-			if err != nil {
-				return 0, err
-			}
-			sfile.Write(debug.Stack())
-			sfile.Close()
 
 			n, err = io.Copy(file, io.MultiReader(&m.b, r))
 			if err != nil {
+				file.Close()
 				os.Remove(file.Name())
 				return 0, err
 			}
@@ -144,7 +135,6 @@ func (m *MemoryConstrainedBuffer) Seek(offset int64, whence int) (int64, error) 
 	if err := m.open(); err != nil {
 		return 0, err
 	}
-	defer m.close()
 	return m.file.Seek(offset, whence)
 }
 
