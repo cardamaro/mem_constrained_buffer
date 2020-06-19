@@ -52,20 +52,10 @@ func (m *MemoryConstrainedBuffer) open() error {
 	return err
 }
 
-func (m *MemoryConstrainedBuffer) close() error {
-	if m.file == nil {
-		return nil
-	}
-	err := m.file.Close()
-	m.file = nil
-	return err
-}
-
 func (m *MemoryConstrainedBuffer) Read(p []byte) (int, error) {
 	if err := m.open(); err != nil {
 		return 0, err
 	}
-	defer m.close()
 	n, err := m.file.Read(p)
 	return n, err
 }
@@ -76,7 +66,6 @@ func (m *MemoryConstrainedBuffer) ReadAt(p []byte, off int64) (int, error) {
 			return 0, err
 		}
 	}
-	defer m.close()
 	return m.file.ReadAt(p, off)
 }
 
@@ -142,7 +131,9 @@ func (m *MemoryConstrainedBuffer) Remove() (err error) {
 	if m.file == nil && m.tmpfile == "" {
 		return nil
 	}
-	err = m.close()
+	if m.file != nil {
+		err = m.file.Close()
+	}
 	if m.tmpfile != "" {
 		err = os.Remove(m.tmpfile)
 	}
@@ -151,7 +142,10 @@ func (m *MemoryConstrainedBuffer) Remove() (err error) {
 
 func (m *MemoryConstrainedBuffer) Close() error {
 	m.b.Reset()
-	err := m.close()
+	if m.file == nil {
+		return nil
+	}
+	err := m.file.Close()
 	if m.removeOnClose {
 		err = m.Remove()
 	}
