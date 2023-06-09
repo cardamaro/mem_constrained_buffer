@@ -11,6 +11,7 @@ import (
 var (
 	DefaultMemorySize int64 = 1 << 17 // 128K
 	FilenamePrefix          = "mem-buf-"
+	TempDir			= os.TempDir()
 )
 
 type MemoryConstrainedBuffer struct {
@@ -90,7 +91,7 @@ func (m *MemoryConstrainedBuffer) ReadFrom(r io.Reader) (int64, error) {
 
 		if n > m.max {
 			// too big, write to disk and flush buffer
-			file, err := ioutil.TempFile("", FilenamePrefix)
+			file, err := ioutil.TempFile(TempDir, FilenamePrefix)
 			if err != nil {
 				return 0, err
 			}
